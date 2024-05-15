@@ -1,7 +1,7 @@
 import time
 import torch
 import torch.nn.functional as F
-import torchvision
+# import torchvision
 
 from torch.utils.data import DataLoader
 
@@ -18,7 +18,7 @@ class Model:
                  checkpoint_folder,
                  n_sample=16,
                  n_mc_samples=20,
-                 num_workers=4):
+                 num_workers=4, dtype=torch.float32):
         self.G = G.to(device)
         self.D = D.to(device)
 
@@ -38,9 +38,11 @@ class Model:
         self.device = device
         self.n_mc_samples = n_mc_samples
         self.n_sample = n_sample
+        self.dtype = dtype
 
     def train(self, epochs, log_every=10, sample_every=10):
-        z_sample = torch.randn(self.n_sample, self.G.latent_dim, 1, 1).to(self.device)
+        # z_sample = torch.randn(self.n_sample, self.G.latent_dim, 1, 1).to(self.device, dtype=self.dtype)
+        z_sample = torch.randn(self.n_sample, self.G.latent_dim).to(self.device, dtype=self.dtype)
 
         for epoch in range(epochs):
             g_loss_sum = 0
@@ -54,12 +56,16 @@ class Model:
             for step, reals in enumerate(self.dataloader):
                 global_step = epoch * len(self.dataloader) + step
 
+                if type(reals) is dict:
+                    reals = reals['input']
                 reals = reals_input = reals.to(self.device)
                 if self.dataset.num_colors > 2:
                     reals_input = F.one_hot(reals_input, num_classes=self.dataset.num_colors)
                     reals_input = reals_input.permute(0, 3, 1, 2).type(torch.float)
 
-                z = torch.randn(reals.size(0), self.G.latent_dim, 1, 1).to(self.device)
+                # z = torch.randn(reals.size(0), self.G.latent_dim, 1, 1).to(self.device, dtype=self.dtype)
+                z = torch.randn(reals.size(0), self.G.latent_dim).to(self.device, dtype=self.dtype)
+
 
                 fake_logits = self.G(z)
 
@@ -101,14 +107,14 @@ class Model:
                     else:
                         samples = logits.argmax(1)
 
-                    samples = self.dataset.dequantize(samples)
-                    reals = self.dataset.dequantize(reals[:self.n_sample])
-
-                    samples_path = str(self.sample_folder / f'fakes_{global_step:06d}.png')
-                    reals_path = str(self.sample_folder / f'reals_{global_step:06d}.png')
-
-                    torchvision.utils.save_image(samples, samples_path, nrow=4, normalize=True)
-                    torchvision.utils.save_image(reals, reals_path, nrow=4, normalize=True)
+                    # samples = self.dataset.dequantize(samples)
+                    # reals = self.dataset.dequantize(reals[:self.n_sample])
+                    #
+                    # samples_path = str(self.sample_folder / f'fakes_{global_step:06d}.png')
+                    # reals_path = str(self.sample_folder / f'reals_{global_step:06d}.png')
+                    #
+                    # torchvision.utils.save_image(samples, samples_path, nrow=4, normalize=True)
+                    # torchvision.utils.save_image(reals, reals_path, nrow=4, normalize=True)
 
             torch.save(self.G, str(self.checkpoint_folder / f'G_{global_step:06d}.pth'))
             torch.save(self.D, str(self.checkpoint_folder / f'D_{global_step:06d}.pth'))

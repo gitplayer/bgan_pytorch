@@ -13,19 +13,25 @@ def compute_norm_weights(log_w):
 
 
 def binary_bgan_loss(D, fake_logits, reals, n_samples=8):
+    dtype = fake_logits.dtype
     batch_size, num_channels = fake_logits.shape[:2]
+    if len(fake_logits.shape) >= 3:
+        num_features = 1
+    else:
+        num_features = fake_logits.shape[1]
+
     spatial_dims = fake_logits.shape[2:]
 
     # Draw samples according to G's output densities
     fake_logits = fake_logits.unsqueeze(0)
-    samples = torch.rand(n_samples, batch_size, num_channels, *spatial_dims, device=fake_logits.device)
-    samples = (samples <= torch.sigmoid(fake_logits)).type(torch.float)
+    samples = torch.rand(n_samples, batch_size, num_channels, *spatial_dims, device=fake_logits.device, dtype=dtype)
+    samples = (samples <= torch.sigmoid(fake_logits)).type(dtype)
 
     real_out = D(reals)
-    fake_out = D(samples.view(-1, 1, *spatial_dims))
+    fake_out = D(samples.view(-1, num_features, *spatial_dims))
 
     log_w = fake_out.view(n_samples, batch_size)
-    log_g = -((1.0 - samples) * fake_logits + F.softplus(-fake_logits)).mean(dim=(2, 3, 4))
+    log_g = -((1.0 - samples) * fake_logits + F.softplus(-fake_logits)).mean(dim=tuple([i + 2 for i in range(len(fake_logits.shape) -2)]))
 
     w_tilde = compute_norm_weights(log_w).detach()
 
@@ -33,8 +39,8 @@ def binary_bgan_loss(D, fake_logits, reals, n_samples=8):
              F.binary_cross_entropy_with_logits(fake_out, torch.zeros_like(fake_out))
     g_loss = -(w_tilde * log_g).sum(0).mean()
 
-    p_fake = (fake_out < 0).type(torch.float).mean().detach()
-    p_real = (real_out > 0).type(torch.float).mean().detach()
+    p_fake = (fake_out < 0).type(dtype).mean().detach()
+    p_real = (real_out > 0).type(dtype).mean().detach()
 
     return d_loss, g_loss, p_fake, p_real
 

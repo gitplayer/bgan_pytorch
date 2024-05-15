@@ -43,6 +43,11 @@ class QuantizedImageDataset(BaseQuantizedImageDataset):
 
 
 class BinaryMNIST(BaseQuantizedImageDataset, MNIST):
+
+    @staticmethod
+    def is_above_half(t):
+        return (t > 0.5).type(torch.float)
+
     def __init__(self, path, img_size=(32, 32)):
         super().__init__(
             path,
@@ -51,7 +56,7 @@ class BinaryMNIST(BaseQuantizedImageDataset, MNIST):
             transform=transforms.Compose([
                 transforms.Resize(img_size),
                 transforms.ToTensor(),
-                lambda t: (t > 0.5).type(torch.float)
+                BinaryMNIST.is_above_half
             ]),
         )
 

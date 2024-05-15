@@ -72,7 +72,7 @@ def train(device,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('dataset_name', choices=['disc_mnist', 'disc_celeba'])
+    parser.add_argument('--dataset_name', choices=['disc_mnist', 'disc_celeba'], default='disc_mnist')
     parser.add_argument('--run-name')
     parser.add_argument('--data-path', dest='data_root_path', default='data')
     parser.add_argument('--batch-size', type=int, default=64)
@@ -86,7 +86,7 @@ def main():
     parser.add_argument('--n-sample', type=int, default=16)
     parser.add_argument('--n-mc-samples', type=int, default=20)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--num-workers', type=int, default=4)
+    parser.add_argument('--num-workers', type=int, default=0) # use 4 for linux
     parser.add_argument('--device')
     args = parser.parse_args()
 
